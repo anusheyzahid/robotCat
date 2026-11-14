@@ -1,0 +1,159 @@
+#include <Arduino.h>
+#include <Servo.h>
+
+// Ultrasonic sensor pins
+const int trigPin = 9;
+const int echoPin = 10;
+
+// Scanning servo pin
+const int scanServoPin = 11;
+
+// Four wheel servo pins
+const int frontLeftPin = 3;
+const int frontRightPin = 5;
+const int backLeftPin = 6;
+const int backRightPin = 7;
+
+Servo scanner;
+Servo frontLeft;
+Servo frontRight;
+Servo backLeft;
+Servo backRight;
+
+// Detection distance: one foot
+const float safeDistance = 30.48;
+
+// Adjust these values for your continuous rotation servos
+const int STOP_SPEED = 90;
+const int FORWARD_LEFT = 110;
+const int FORWARD_RIGHT = 70;
+const int TURN_LEFT = 110;
+const int TURN_RIGHT = 70;
+
+float getDistance() {
+    digitalWrite(trigPin, LOW);
+    delayMicroseconds(2);
+
+    digitalWrite(trigPin, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(trigPin, LOW);
+
+    long duration = pulseIn(echoPin, HIGH, 30000);
+
+    if (duration == 0) {
+        return 999;
+    }
+
+    return duration * 0.0343 / 2;
+}
+
+void stopRobot() {
+    frontLeft.write(STOP_SPEED);
+    frontRight.write(STOP_SPEED);
+    backLeft.write(STOP_SPEED);
+    backRight.write(STOP_SPEED);
+}
+
+void moveForward() {
+    frontLeft.write(FORWARD_LEFT);
+    frontRight.write(FORWARD_RIGHT);
+    backLeft.write(FORWARD_LEFT);
+    backRight.write(FORWARD_RIGHT);
+}
+
+void turnLeft() {
+    frontLeft.write(TURN_LEFT);
+    backLeft.write(TURN_LEFT);
+    frontRight.write(TURN_RIGHT);
+    backRight.write(TURN_RIGHT);
+}
+
+void turnRight() {
+    frontLeft.write(TURN_LEFT);
+    backLeft.write(TURN_LEFT);
+    frontRight.write(TURN_RIGHT);
+    backRight.write(TURN_RIGHT);
+}
+
+float lookAt(int angle) {
+    scanner.write(angle);
+    delay(600);
+
+    float distance = getDistance();
+
+    Serial.print("Scanning angle ");
+    Serial.print(angle);
+    Serial.print(": ");
+    Serial.print(distance);
+    Serial.println(" cm");
+
+    return distance;
+}
+
+void setup() {
+    Serial.begin(9600);
+
+    pinMode(trigPin, OUTPUT);
+    pinMode(echoPin, INPUT);
+
+    scanner.attach(scanServoPin);
+
+    frontLeft.attach(frontLeftPin);
+    frontRight.attach(frontRightPin);
+    backLeft.attach(backLeftPin);
+    backRight.attach(backRightPin);
+
+    stopRobot();
+
+    scanner.write(90);
+    delay(1000);
+}
+
+void loop() {
+    scanner.write(90);
+    delay(150);
+
+    float frontDistance = getDistance();
+
+    Serial.print("Front distance: ");
+    Serial.println(frontDistance);
+
+    if (frontDistance > safeDistance) {
+        moveForward();
+    }
+    else {
+        stopRobot();
+        delay(400);
+
+        float leftDistance = lookAt(150);
+        float rightDistance = lookAt(30);
+
+        scanner.write(90);
+        delay(300);
+
+        if (leftDistance > safeDistance &&
+            leftDistance > rightDistance) {
+
+            turnLeft();
+            delay(650);
+        }
+        else if (rightDistance > safeDistance) {
+
+            turnRight();
+            delay(650);
+        }
+        else {
+            // Both directions are blocked:
+            // reverse briefly and try again
+            frontLeft.write(70);
+            frontRight.write(110);
+            backLeft.write(70);
+            backRight.write(110);
+
+            delay(600);
+        }
+
+        stopRobot();
+        delay(300);
+    }
+}
