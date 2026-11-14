@@ -1,0 +1,41 @@
+#if defined(__INTELLISENSE__) && !__has_include(<Servo.h>)
+// Keep editor analysis working when the Servo library is not on its include path.
+class Servo {
+public:
+    void attach(int pin);
+    void write(int angle);
+};
+#else
+#include <Servo.h>
+#endif
+
+#include <Arduino.h>
+
+// Pin Definitions
+const int trigPin = 2; // Ultrasonic sensor trigger
+const int echoPin = 3; // Ultrasonic sensor echo
+const int tailServoPin = 9; // Micro server for tail
+
+// Motor Driver Pins (L298N)
+const int motorLeft1 = 4;
+const int motorLeft2 = 5;
+const int motorRight1 = 6;
+const int motorRight2 = 7;
+
+Servo tailServo;
+
+void setup() {
+    // Initialize sensor and buzzer pins
+    pinMode(trigPin, OUTPUT);
+    pinMode(echoPin, INPUT);
+
+    // Initialize motor driver pins
+    pinMode(motorLeft1, OUTPUT);
+    pinMode(motorLeft2, OUTPUT);
+    pinMode(motorRight1, OUTPUT);
+    pinMode(motorRight2, OUTPUT);
+
+    // Attach tail servo and center it
+    tailServo.attach(tailServoPin);
+    tailServo.write(90);
+}
